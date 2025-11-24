@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>空間模擬大師</title>
+    
+    <!-- PWA 設定 -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
+    <meta name="theme-color" content="#3b82f6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <style>
+        :root { --primary-color: #3b82f6; --bg-color: #f3f4f6; --panel-bg: #ffffff; --danger-color: #ef4444; --success-color: #10b981; --border-color: #e5e7eb; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: var(--bg-color); display: flex; height: 100vh; overflow: hidden; user-select: none; }
+        .controls { width: 360px; background: var(--panel-bg); padding: 15px; box-shadow: 2px 0 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 8px; z-index: 10; overflow-y: auto; }
+        h1 { font-size: 1.1rem; margin: 0 0 5px 0; color: #333; display: flex; align-items: center; gap: 5px; }
+        h2 { font-size: 0.9rem; margin: 8px 0 2px 0; border-bottom: 2px solid var(--primary-color); padding-bottom: 2px; display: inline-block; color: #444; }
+        .row { display: flex; gap: 5px; }
+        .input-group { flex: 1; display: flex; flex-direction: column; }
+        label { font-size: 0.75rem; margin-bottom: 1px; color: #666; font-weight: bold; }
+        input { padding: 5px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; width: 100%; box-sizing: border-box; }
+        input:focus { border-color: var(--primary-color); outline: none; }
+        .warehouse-info { background-color: #f3f4f6; color: #4b5563; font-size: 0.8rem; padding: 4px 6px; border-radius: 4px; text-align: right; margin-top: 2px; border: 1px solid #e5e7eb; }
+        .warehouse-info span { font-weight: bold; color: #1f2937; }
+        .preset-header { font-size: 0.85rem; color: #555; margin-bottom: 5px; font-weight: bold; }
+        .preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 5px; }
+        .preset-btn { background-color: #f8f9fa; border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 10px; text-align: left; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; justify-content: center; }
+        .preset-btn:hover { background-color: #eef2ff; border-color: #c7d2fe; transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .preset-btn:active { transform: translateY(0); }
+        .preset-title { font-size: 0.85rem; color: #333; font-weight: bold; display: flex; align-items: center; gap: 5px; margin-bottom: 2px; }
+        .preset-dim { font-size: 0.7rem; color: #666; }
+        .custom-item-box { background: #fff; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; display: flex; flex-direction: column; gap: 5px; }
+        .btn-add { background-color: var(--success-color); color: white; border: none; padding: 0 15px; border-radius: 4px; cursor: pointer; font-size: 1rem; font-weight: bold; display: flex; align-items: center; justify-content: center; }
+        .btn-add:hover { background-color: #059669; }
+        .item-list-container { border: 1px solid var(--border-color); border-radius: 4px; background: #fff; display: flex; flex-direction: column; max-height: 150px; }
+        .list-header { background: #f3f4f6; padding: 5px 8px; font-size: 0.75rem; font-weight: bold; color: #666; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; }
+        .list-scroll-area { overflow-y: auto; flex: 1; }
+        .list-item { display: flex; justify-content: space-between; align-items: center; padding: 5px 8px; font-size: 0.8rem; border-bottom: 1px solid #f3f4f6; }
+        .list-item:last-child { border-bottom: none; }
+        .list-remove { color: #999; cursor: pointer; font-size: 12px; padding: 2px 5px;}
+        .list-remove:hover { color: var(--danger-color); background: #fee2e2; border-radius: 3px; }
+        .list-summary { background: #eff6ff; border-top: 1px solid #dbeafe; padding: 5px 8px; font-size: 0.75rem; color: #1e40af; text-align: right; }
+        .btn-group { display: flex; gap: 5px; margin-top: 5px; }
+        button.main-action { flex: 2; background-color: var(--primary-color); color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer; font-size: 1rem; font-weight: bold; }
+        button.main-action:hover { background-color: #2563eb; }
+        button.secondary { flex: 1; background-color: #6b7280; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
+        button.secondary:hover { background-color: #4b5563; }
+        button.clear-btn { flex: 1; background-color: #ef4444; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
+        button.clear-btn:hover { background-color: #dc2626; }
+        .result-box { background: #eef2ff; border: 1px solid #c7d2fe; padding: 10px; border-radius: 6px; margin-top: 5px; }
+        .result-row { display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 5px; color: #444; }
+        .result-total { font-size: 1rem; font-weight: bold; color: var(--primary-color); text-align: right; border-top: 1px solid #ccc; padding-top: 5px; margin-top: 5px;}
+        .hint-box { font-size: 0.75rem; color: #555; background: #f9fafb; border: 1px dashed #ccc; padding: 6px; border-radius: 4px; line-height: 1.4; margin-top: 5px; }
+        .status-ok { color: var(--success-color); font-weight: bold; }
+        .status-fail { color: var(--danger-color); font-weight: bold; }
+        .viewer { flex: 1; position: relative; background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 20px 20px; overflow: hidden; touch-action: none; }
+        svg { width: 100%; height: 100%; cursor: default; }
+        .cube-group { cursor: grab; transition: opacity 0.3s; }
+        .cube-group:active { cursor: grabbing; }
+        .cube-face { stroke: rgba(0,0,0,0.2); stroke-width: 1; transition: fill 0.2s ease; }
+        .cube-face:hover { opacity: 0.9; stroke: #fff; }
+        .cube-text { font-family: sans-serif; font-size: 10px; fill: #333; pointer-events: none; text-shadow: 0 0 2px rgba(255,255,255,0.5); user-select: none;}
+        .cube-group.error .face-top { fill: #f87171 !important; }   
+        .cube-group.error .face-right { fill: #991b1b !important; } 
+        .cube-group.error .face-left { fill: #ef4444 !important; }
+        .cube-group.error .cube-text { fill: #fff; text-shadow: 0 0 2px rgba(0,0,0,0.5); }
+        .tooltip { position: absolute; background: rgba(0,0,0,0.8); color: white; padding: 4px 8px; border-radius: 4px; pointer-events: none; font-size: 11px; display: none; z-index: 20; }
+    </style>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js').then(reg => console.log('APP 註冊成功', reg.scope)).catch(err => console.log('APP 註冊失敗', err));
+        });
+      }
+    </script>
+</head>
+<body>
+    <div class="controls">
+        <h1>📦 空間模擬大師</h1>
+        <h2>1. 倉庫尺寸 (cm)</h2>
+        <div class="row">
+            <div class="input-group"><label>長(L)</label><input type="number" id="spaceL" value="150"></div>
+            <div class="input-group"><label>寬(W)</label><input type="number" id="spaceW" value="150"></div>
+            <div class="input-group"><label>高(H)</label><input type="number" id="spaceH" value="200"></div>
+        </div>
+        <div class="warehouse-info">倉庫材積：<span id="warehouseTsai">0</span> 才</div>
+        <h2>2. 加入物品</h2>
+        <div class="preset-header">快速填入常用尺寸：</div>
+        <div class="preset-grid">
+            <button class="preset-btn" onclick="addItem(35, 30, 25, 1, '小紙箱')"><div class="preset-title">📦 小紙箱</div><div class="preset-dim">35x30x25</div></button>
+            <button class="preset-btn" onclick="addItem(48, 36, 32, 1, '中紙箱')"><div class="preset-title">📦 中紙箱</div><div class="preset-dim">48x36x32</div></button>
+            <button class="preset-btn" onclick="addItem(60, 45, 40, 1, '大型箱')"><div class="preset-title">📦 大型箱</div><div class="preset-dim">60x45x40</div></button>
+            <button class="preset-btn" onclick="addItem(65, 65, 105, 1, '洗衣機')"><div class="preset-title">🧺 洗衣機</div><div class="preset-dim">65x65x105</div></button>
+            <button class="preset-btn" onclick="addItem(90, 190, 20, 1, '單人床墊')"><div class="preset-title">🛏️ 單人床墊</div><div class="preset-dim">90x190x20</div></button>
+            <button class="preset-btn" onclick="addItem(60, 60, 100, 1, '小冰箱')"><div class="preset-title">❄️ 小冰箱</div><div class="preset-dim">60x60x100</div></button>
+        </div>
+        <div class="preset-header" style="margin-top:5px;">手動輸入：</div>
+        <div class="custom-item-box">
+            <div class="input-group"><label>物品名稱 (選填)</label><input type="text" id="customName" placeholder="例如：電腦主機..."></div>
+            <div class="row" style="align-items: flex-end;">
+                <div class="input-group"><label>長</label><input type="number" id="customL" value="40"></div>
+                <div class="input-group"><label>寬</label><input type="number" id="customW" value="30"></div>
+                <div class="input-group"><label>高</label><input type="number" id="customH" value="30"></div>
+                <div class="input-group" style="flex:0.6"><label>量</label><input type="number" id="customQty" value="1"></div>
+                <button class="btn-add" onclick="addCustomItem()">＋</button>
+            </div>
+        </div>
+        <h2>3. 待計算清單</h2>
+        <div class="item-list-container">
+            <div class="list-header"><span>品名 / 尺寸</span><span>數量</span></div>
+            <div id="itemListContent" class="list-scroll-area"><div style="padding:10px; text-align:center; color:#999; font-size:0.8rem;">(尚未加入物品)</div></div>
+            <div id="listSummary" class="list-summary" style="display:none;">種類: 0 | 總件數: 0</div>
+        </div>
+        <div class="btn-group">
+            <button class="clear-btn" onclick="clearAll()">清空</button>
+            <button class="secondary" onclick="resetView()">視角</button>
+            <button class="main-action" onclick="simulate()">開始計算</button>
+        </div>
+        <div class="result-box" id="resultBox" style="display:none;">
+            <div class="result-row"><span>需求總數:</span><span id="reqQty">0</span></div>
+            <div class="result-row"><span>實際擺放:</span><span id="placedQty">0</span></div>
+            <div id="statusMsg" style="text-align:right; font-size:0.85rem; margin-bottom:5px;"></div>
+            <div class="result-total">總材積: <span id="totalTsai">0</span> 才</div>
+             <div style="font-size: 0.75rem; color:red; margin-top:2px; text-align:right;" id="overflowWarning"></div>
+        </div>
+        <div class="hint-box"><b>💡 使用說明：</b><br>• <b>右鍵單擊</b>：水平旋轉 (Z軸)。<br>• <b>右鍵雙擊</b>：倒下/立起 (X軸)。<br>• <b>左鍵拖曳</b>：移動物品 (超出範圍變紅)。</div>
+    </div>
+    <div class="viewer"><svg id="svgCanvas" viewBox="-400 -300 800 600"><g id="sceneGroup"></g></svg><div id="tooltip" class="tooltip"></div></div>
+    <script>
+        const svgCanvas = document.getElementById('svgCanvas');
+        const sceneGroup = document.getElementById('sceneGroup');
+        const tooltip = document.getElementById('tooltip');
+        let scale = 2; let viewBox = { x: -400, y: -300, w: 800, h: 600 };
+        let cartItems = []; let isCameraDragging = false; let cameraStart = { x: 0, y: 0 }; let draggedBox = null; let boxStartPos = { x: 0, y: 0 }; let boxCurrentTransform = { x: 0, y: 0 };
+        const COS30 = Math.cos(Math.PI / 6); const SIN30 = Math.sin(Math.PI / 6);
+        svgCanvas.addEventListener('contextmenu', event => event.preventDefault());
+        function addItem(l, w, h, qty, name) {
+            const existingItem = cartItems.find(item => item.l == l && item.w == w && item.h == h && item.name === name);
+            if (existingItem) { existingItem.qty += parseInt(qty); } else { cartItems.push({ l: parseFloat(l), w: parseFloat(w), h: parseFloat(h), qty: parseInt(qty), name: name }); }
+            updateListUI(); document.getElementById('resultBox').style.display = 'none';
+        }
+        function addCustomItem() {
+            const nameInput = document.getElementById('customName').value.trim(); const l = document.getElementById('customL').value; const w = document.getElementById('customW').value; const h = document.getElementById('customH').value; const qty = document.getElementById('customQty').value;
+            const finalName = nameInput !== "" ? nameInput : "自訂物品";
+            if (l > 0 && w > 0 && h > 0 && qty > 0) { addItem(l, w, h, qty, finalName); document.getElementById('customName').value = ''; } else { alert("請輸入有效的尺寸與數量"); }
+        }
+        function clearAll() { cartItems = []; updateListUI(); sceneGroup.innerHTML = ''; document.getElementById('resultBox').style.display = 'none'; }
+        function updateListUI() {
+            const container = document.getElementById('itemListContent'); const summary = document.getElementById('listSummary'); container.innerHTML = '';
+            if (cartItems.length === 0) { container.innerHTML = '<div style="padding:10px; text-align:center; color:#999; font-size:0.8rem;">(尚未加入物品)</div>'; summary.style.display = 'none'; return; }
+            let totalTypes = 0, totalItems = 0;
+            cartItems.forEach((item, index) => {
+                totalTypes++; totalItems += item.qty;
+                const div = document.createElement('div'); div.className = 'list-item';
+                div.innerHTML = `<div class="list-item-info"><b style="color:#333;">${item.name}</b> <span style="color:#888; font-size:0.75rem;">(${item.l}x${item.w}x${item.h})</span></div><span class="list-item-qty">x${item.qty}</span><span class="list-remove" onclick="removeCartItem(${index})">刪除</span>`;
+                container.appendChild(div);
+            });
+            summary.innerHTML = `種類: <b>${totalTypes}</b> | 總件數: <b>${totalItems}</b>`; summary.style.display = 'block';
+        }
+        function removeCartItem(index) { cartItems.splice(index, 1); updateListUI(); document.getElementById('resultBox').style.display = 'none'; }
+        function iso(x, y, z) { const screenX = (x - y) * COS30; const screenY = (x + y) * SIN30 - z; return { x: screenX * scale, y: screenY * scale }; }
+        function getPathD(points) { let d = `M ${points[0].x} ${points[0].y}`; for (let i = 1; i < points.length; i++) d += ` L ${points[i].x} ${points[i].y}`; d += " Z"; return d; }
+        function calculateCubePoints(x, y, z, l, w, h) {
+            const drawL = l - 0.5; const drawW = w - 0.5; const drawH = h - 0.5;
+            const p0 = iso(x, y, z); const p1 = iso(x + drawL, y, z); const p2 = iso(x + drawL, y + drawW, z); const p3 = iso(x, y + drawW, z);
+            const p4 = iso(x, y, z + drawH); const p5 = iso(x + drawL, y, z + drawH); const p6 = iso(x + drawL, y + drawW, z + drawH); const p7 = iso(x, y + drawW, z + drawH);
+            return { p0, p1, p2, p3, p4, p5, p6, p7 };
+        }
+        function createCube(x, y, z, l, w, h, color, name) {
+            const group = document.createElementNS("http://www.w3.org/2000/svg", "g"); group.setAttribute("class", "cube-group");
+            group.dataset.lx = x; group.dataset.ly = y; group.dataset.lz = z; group.dataset.dimL = l; group.dataset.dimW = w; group.dataset.dimH = h; group.dataset.tx = 0; group.dataset.ty = 0; group.dataset.name = name;
+            const pts = calculateCubePoints(x, y, z, l, w, h);
+            const faceRight = document.createElementNS("http://www.w3.org/2000/svg", "path"); faceRight.setAttribute("class", "cube-face face-right"); faceRight.setAttribute("fill", "#b45309"); faceRight.setAttribute("d", getPathD([pts.p1, pts.p2, pts.p6, pts.p5]));
+            const faceLeft = document.createElementNS("http://www.w3.org/2000/svg", "path"); faceLeft.setAttribute("class", "cube-face face-left"); faceLeft.setAttribute("fill", "#d97706"); faceLeft.setAttribute("d", getPathD([pts.p2, pts.p3, pts.p7, pts.p6]));
+            const faceTop = document.createElementNS("http://www.w3.org/2000/svg", "path"); faceTop.setAttribute("class", "cube-face face-top"); faceTop.setAttribute("fill", "#fcd34d"); faceTop.setAttribute("d", getPathD([pts.p4, pts.p5, pts.p6, pts.p7]));
+            const textEl = document.createElementNS("http://www.w3.org/2000/svg", "text"); textEl.setAttribute("class", "cube-text"); textEl.setAttribute("text-anchor", "middle"); textEl.setAttribute("dominant-baseline", "middle"); textEl.textContent = name;
+            const cx = x + (l - 0.5) / 2; const cy = y + (w - 0.5) / 2; const cz = z + (h - 0.5); const textPos = iso(cx, cy, cz); textEl.setAttribute("x", textPos.x); textEl.setAttribute("y", textPos.y);
+            group.appendChild(faceRight); group.appendChild(faceLeft); group.appendChild(faceTop); group.appendChild(textEl);
+            group.onmouseover = (e) => { if(!draggedBox) showTooltip(e, `${name}: ${parseFloat(group.dataset.dimL)}x${parseFloat(group.dataset.dimW)}x${parseFloat(group.dataset.dimH)}`); };
+            group.onmouseout = hideTooltip;
+            group.addEventListener('contextmenu', (e) => {
+                e.preventDefault(); e.stopPropagation();
+                const now = Date.now(); const lastClick = parseInt(group.dataset.lastClickTime || 0);
+                if (now - lastClick < 250) { if (group.clickTimeout) { clearTimeout(group.clickTimeout); group.clickTimeout = null; } rotateBoxX(group); } 
+                else { group.clickTimeout = setTimeout(() => { rotateBox(group); }, 250); }
+                group.dataset.lastClickTime = now;
+            });
+            return group;
+        }
+        function redrawCube(group) {
+            const l = parseFloat(group.dataset.dimL); const w = parseFloat(group.dataset.dimW); const h = parseFloat(group.dataset.dimH); const x = parseFloat(group.dataset.lx); const y = parseFloat(group.dataset.ly); const z = parseFloat(group.dataset.lz);
+            const pts = calculateCubePoints(x, y, z, l, w, h);
+            group.querySelector('.face-right').setAttribute("d", getPathD([pts.p1, pts.p2, pts.p6, pts.p5]));
+            group.querySelector('.face-left').setAttribute("d", getPathD([pts.p2, pts.p3, pts.p7, pts.p6]));
+            group.querySelector('.face-top').setAttribute("d", getPathD([pts.p4, pts.p5, pts.p6, pts.p7]));
+            const cx = x + (l - 0.5) / 2; const cy = y + (w - 0.5) / 2; const cz = z + (h - 0.5); const textPos = iso(cx, cy, cz);
+            const textEl = group.querySelector('.cube-text'); textEl.setAttribute("x", textPos.x); textEl.setAttribute("y", textPos.y);
+            checkBoundary(group);
+        }
+        function rotateBox(group) { const currentL = parseFloat(group.dataset.dimL); const currentW = parseFloat(group.dataset.dimW); group.dataset.dimL = currentW; group.dataset.dimW = currentL; redrawCube(group); }
+        function rotateBoxX(group) { const currentW = parseFloat(group.dataset.dimW); const currentH = parseFloat(group.dataset.dimH); group.dataset.dimW = currentH; group.dataset.dimH = currentW; redrawCube(group); }
+        function createContainer(L, W, H) {
+            const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            const p0 = iso(0, 0, 0); const p1 = iso(L, 0, 0); const p2 = iso(L, W, 0); const p3 = iso(0, W, 0);
+            const floor = document.createElementNS("http://www.w3.org/2000/svg", "path"); floor.setAttribute("d", getPathD([p0, p1, p2, p3])); floor.setAttribute("fill", "rgba(200,200,200,0.3)"); floor.setAttribute("stroke", "#999"); g.appendChild(floor);
+            const h0 = iso(0, 0, H); const h1 = iso(L, 0, H); const h2 = iso(L, W, H); const h3 = iso(0, W, H);
+            const ceiling = document.createElementNS("http://www.w3.org/2000/svg", "path"); ceiling.setAttribute("d", getPathD([h0, h1, h2, h3])); ceiling.setAttribute("fill", "none"); ceiling.setAttribute("stroke", "#333"); ceiling.setAttribute("stroke-dasharray", "5,5"); g.appendChild(ceiling);
+            [ [p0, h0], [p1, h1], [p2, h2], [p3, h3] ].forEach(pair => { const line = document.createElementNS("http://www.w3.org/2000/svg", "line"); line.setAttribute("x1", pair[0].x); line.setAttribute("y1", pair[0].y); line.setAttribute("x2", pair[1].x); line.setAttribute("y2", pair[1].y); line.setAttribute("stroke", "#333"); line.setAttribute("stroke-dasharray", "5,5"); g.appendChild(line); });
+            return g;
+        }
+        function calculateMixedPositions(spaceL, spaceW, spaceH, allBoxes) {
+            let positions = []; let placedCount = 0; let overflow = false; allBoxes.sort((a, b) => b.h - a.h);
+            let currentX = 0, currentY = 0, currentZ = 0; let rowMaxW = 0, layerMaxH = 0;
+            for (let box of allBoxes) {
+                if (currentX + box.l > spaceL) { currentX = 0; currentY += rowMaxW; rowMaxW = 0; }
+                if (currentY + box.w > spaceW) { currentX = 0; currentY = 0; currentZ += layerMaxH; rowMaxW = 0; layerMaxH = 0; }
+                if (currentZ + box.h > spaceH) { overflow = true; continue; }
+                positions.push({ x: currentX, y: currentY, z: currentZ, l: box.l, w: box.w, h: box.h, name: box.name }); placedCount++;
+                currentX += box.l; if (box.w > rowMaxW) rowMaxW = box.w; if (box.h > layerMaxH) layerMaxH = box.h;
+            }
+            return { positions, placedCount, overflow, totalRequested: allBoxes.length };
+        }
+        function simulate() {
+            const sL = parseFloat(document.getElementById('spaceL').value); const sW = parseFloat(document.getElementById('spaceW').value); const sH = parseFloat(document.getElementById('spaceH').value);
+            const warehouseRawVol = (sL * sW * sH) / 28317; const warehouseFinalVol = Math.round(warehouseRawVol / 10) * 10; document.getElementById('warehouseTsai').innerText = warehouseFinalVol;
+            if (cartItems.length === 0) { alert("請先加入物品到清單！"); return; }
+            let allBoxes = []; let totalVol = 0;
+            cartItems.forEach(item => {
+                const itemVol = ((item.l * item.w * item.h) / 28317 * 1.6) * item.qty; totalVol += itemVol;
+                for (let i = 0; i < item.qty; i++) { allBoxes.push({ l: item.l, w: item.w, h: item.h, name: item.name }); }
+            });
+            document.getElementById('totalTsai').innerText = totalVol.toFixed(3);
+            const layout = calculateMixedPositions(sL, sW, sH, allBoxes);
+            const reqQty = document.getElementById('reqQty'); const placedQty = document.getElementById('placedQty'); const statusMsg = document.getElementById('statusMsg');
+            reqQty.innerText = layout.totalRequested; placedQty.innerText = layout.placedCount; document.getElementById('resultBox').style.display = 'block';
+            if (layout.placedCount === layout.totalRequested) { statusMsg.innerHTML = '<span class="status-ok">✔ 全部成功放入！</span>'; document.getElementById('overflowWarning').innerText = ""; } 
+            else { const diff = layout.totalRequested - layout.placedCount; statusMsg.innerHTML = `<span class="status-fail">✘ 空間不足，短缺 ${diff} 件</span>`; document.getElementById('overflowWarning').innerText = `⚠️ 尚有 ${diff} 件物品無法放入`; }
+            drawScene(sL, sW, sH, layout.positions);
+        }
+        function drawScene(sL, sW, sH, items) {
+            sceneGroup.innerHTML = ''; const maxDim = Math.max(sL, sW, sH); scale = 250 / maxDim; sceneGroup.appendChild(createContainer(sL, sW, sH)); items.sort((a, b) => (a.x + a.y + a.z) - (b.x + b.y + b.z));
+            items.forEach((box, index) => { setTimeout(() => { const cube = createCube(box.x, box.y, box.z, box.l, box.w, box.h, '#f59e0b', box.name); cube.style.opacity = 0; cube.style.transition = "opacity 0.5s ease-out"; sceneGroup.appendChild(cube); checkBoundary(cube); setTimeout(() => { cube.style.opacity = 1; setTimeout(() => cube.style.transition = "none", 500); }, 10); }, index * 30); });
+        }
+        function checkBoundary(box) {
+            const sL = parseFloat(document.getElementById('spaceL').value); const sW = parseFloat(document.getElementById('spaceW').value);
+            const origX = parseFloat(box.dataset.lx); const origY = parseFloat(box.dataset.ly); const tx = parseFloat(box.dataset.tx); const ty = parseFloat(box.dataset.ty);
+            const dimL = parseFloat(box.dataset.dimL); const dimW = parseFloat(box.dataset.dimW);
+            const sx = tx / scale; const sy = ty / scale; const A = sx / COS30; const B = sy / SIN30; const deltaX = (A + B) / 2; const deltaY = (B - A) / 2;
+            const currentX = origX + deltaX; const currentY = origY + deltaY; const tolerance = 2; 
+            const isOut = (currentX < -tolerance || currentY < -tolerance || (currentX + dimL) > (sL + tolerance) || (currentY + dimW) > (sW + tolerance));
+            if (isOut) box.classList.add('error'); else box.classList.remove('error');
+        }
+        svgCanvas.addEventListener('mousedown', e => {
+            if(e.button !== 0) return; const clickedCube = e.target.closest('.cube-group');
+            if (clickedCube) { draggedBox = clickedCube; sceneGroup.appendChild(draggedBox); boxStartPos = { x: e.clientX, y: e.clientY }; boxCurrentTransform = { x: parseFloat(draggedBox.dataset.tx)||0, y: parseFloat(draggedBox.dataset.ty)||0 }; svgCanvas.style.cursor = 'grabbing'; hideTooltip(); checkBoundary(draggedBox); } 
+            else { isCameraDragging = true; cameraStart = { x: e.clientX, y: e.clientY }; svgCanvas.style.cursor = 'move'; }
+        });
+        window.addEventListener('mousemove', e => {
+            if (draggedBox) { e.preventDefault(); const dx = e.clientX - boxStartPos.x; const dy = e.clientY - boxStartPos.y; const ctm = svgCanvas.getScreenCTM(); const newTx = boxCurrentTransform.x + (dx / ctm.a); const newTy = boxCurrentTransform.y + (dy / ctm.d); draggedBox.setAttribute('transform', `translate(${newTx}, ${newTy})`); draggedBox.dataset.tx = newTx; draggedBox.dataset.ty = newTy; boxStartPos = { x: e.clientX, y: e.clientY }; boxCurrentTransform = { x: newTx, y: newTy }; checkBoundary(draggedBox); } 
+            else if (isCameraDragging) { e.preventDefault(); const dx = e.clientX - cameraStart.x; const dy = e.clientY - cameraStart.y; viewBox.x -= dx; viewBox.y -= dy; svgCanvas.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`); cameraStart = { x: e.clientX, y: e.clientY }; }
+        });
+        window.addEventListener('mouseup', () => { draggedBox = null; isCameraDragging = false; svgCanvas.style.cursor = 'default'; });
+        svgCanvas.addEventListener('wheel', e => { e.preventDefault(); const zoomFactor = 1.1; if (e.deltaY > 0) { viewBox.w *= zoomFactor; viewBox.h *= zoomFactor; viewBox.x -= (viewBox.w * 0.05); viewBox.y -= (viewBox.h * 0.05); } else { viewBox.w /= zoomFactor; viewBox.h /= zoomFactor; viewBox.x += (viewBox.w * 0.05); viewBox.y += (viewBox.h * 0.05); } svgCanvas.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`); });
+        function resetView() { viewBox = { x: -400, y: -300, w: 800, h: 600 }; svgCanvas.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`); }
+        function showTooltip(e, text) { tooltip.style.display = 'block'; tooltip.style.left = e.clientX + 15 + 'px'; tooltip.style.top = e.clientY + 15 + 'px'; tooltip.innerText = text; }
+        function hideTooltip() { tooltip.style.display = 'none'; }
+    </script>
+</body>
+</html>
